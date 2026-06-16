@@ -513,7 +513,12 @@ function render(){
   const area=document.getElementById('chartArea');
   area.innerHTML='';
 
+  // Firebase는 빈 배열을 삭제하므로 누락 필드를 복구
+  if(!STATE) return;
+  if(!Array.isArray(STATE.years)) STATE.years=[];
+
   STATE.years.forEach(yd=>{
+    if(!Array.isArray(yd.data)) yd.data=[];   // data 누락 복구
     const {year,expanded:yExp,data}=yd;
 
     // 연도 헤더
@@ -557,6 +562,7 @@ function render(){
       tbody.appendChild(secTr);
 
       catData.forEach((p,pi)=>{
+        if(!Array.isArray(p.spans)) p.spans=[];   // spans 누락 복구
         const color=TYPE_COLOR[p.type]||'#7A8496';
         const bgc=TYPE_BG[p.type]||'#eaecee';
         const rowBg=pi%2===0?'#fff':'#FAFBFD';
@@ -564,6 +570,7 @@ function render(){
 
         const allS=p.spans.map(s=>wi(s.sm,s.sw));
         const allE=p.spans.map(s=>wi(s.em,s.ew));
+        if(!allS.length){ return; }   // 기간 없는 프로젝트는 건너뜀
         const gSIdx=Math.min(...allS),gEIdx=Math.max(...allE);
 
         // 상위 행
@@ -902,6 +909,20 @@ function printChart(mode){
 /* 초기 render()는 Firebase 데이터 로드 후 실행됨 */
 </script>
 
+<script>
+// Firebase가 삭제한 빈 배열 필드를 복구하는 정규화 함수
+function normalizeState(st){
+  if(!st) return;
+  if(!Array.isArray(st.years)) st.years=[];
+  st.years.forEach(function(yd){
+    if(!Array.isArray(yd.data)) yd.data=[];
+    yd.data.forEach(function(p){
+      if(!Array.isArray(p.spans)) p.spans=[];
+    });
+  });
+}
+</script>
+
 <!-- ━━━ Firebase 실시간 연동 ━━━ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -923,6 +944,7 @@ function printChart(mode){
   DB_REF.once('value').then(function(snap){
     var data=snap.val();
     STATE = data ? data : JSON.parse(JSON.stringify(DEFAULT_DATA));
+    normalizeState(STATE);            // 누락 필드 복구
     if(!data){ DB_REF.set(STATE); }   // 최초 1회 기본 데이터 업로드
     showLoadingOverlay(false);
     render();
@@ -931,8 +953,9 @@ function printChart(mode){
       if(_isRemoteUpdate) return;
       var d=snap2.val();
       if(!d) return;
-      STATE.years=d.years;
+      STATE.years=d.years||[];
       STATE.nextId=d.nextId;
+      normalizeState(STATE);
       render();
       showSyncIndicator();
     });
