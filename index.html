@@ -902,7 +902,7 @@ function openAddModal(year){
     </div>
     <div style="margin-bottom:10px;"><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" placeholder="예: 한림원의 창"></div>
     <div class="grid2">
-      <div><label class="field-label">주기</label><select class="field-input" id="m-cycle"><option>월간</option><option>계간</option><option>정기</option><option>수시</option></select></div>
+      <div><label class="field-label">주기</label><select class="field-input" id="m-cycle"><option>월간</option><option>계간</option><option>수시</option><option>기타</option></select></div>
       <div><label class="field-label">담당자</label><input class="field-input" type="text" id="m-owner" placeholder="예: 이"></div>
     </div>
     <div style="border-top:1px solid #E2E6ED;padding-top:12px;margin-top:4px;">
@@ -930,7 +930,7 @@ function openEditModal(year,id){
     </div>
     <div class="grid2">
       <div><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" value="${p.proj}"></div>
-      <div><label class="field-label">주기</label><select class="field-input" id="m-cycle">${['월간','계간','정기','수시'].map(c=>`<option${p.cycle===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      <div><label class="field-label">주기</label><select class="field-input" id="m-cycle">${['월간','계간','수시','기타'].map(c=>`<option${p.cycle===c?' selected':''}>${c}</option>`).join('')}</select></div>
     </div>
     <div class="grid2">
       <div><label class="field-label">업체명</label><input class="field-input" type="text" id="m-client" value="${p.client||''}"></div>
