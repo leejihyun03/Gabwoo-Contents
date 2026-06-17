@@ -21,6 +21,10 @@ body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothi
 .ctrlbar{background:#fff;border-bottom:1px solid #E2E6ED;padding:6px 20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;position:sticky;top:57px;z-index:39;}
 .filter-btn{padding:4px 13px;font-size:11px;border:1px solid #C8CDD8;border-radius:20px;cursor:pointer;font-family:inherit;background:#fff;color:#5A6276;transition:all .15s;}
 .filter-btn.active{background:#1E3A5F;border-color:#1E3A5F;color:#fff;}
+.owner-btn{padding:3px 10px;font-size:11px;}
+.owner-btn.active{background:#0F6E56;border-color:#0F6E56;color:#fff;}
+tr.drag-over-line td{border-top:2px solid #2563A8!important;}
+tr[draggable=true] .label-client::before{content:'⠿ ';color:#C8CDD8;font-size:10px;cursor:grab;}
 .ctrl-btn{padding:4px 10px;font-size:11px;border:1px solid #C8CDD8;border-radius:6px;background:#fff;color:#5A6276;cursor:pointer;font-family:inherit;}
 .ctrl-btn:hover{background:#F0F4FF;color:#1E3A5F;}
 .add-btn{padding:4px 11px;font-size:11px;border:1px dashed #C8CDD8;border-radius:6px;background:transparent;color:#5A6276;cursor:pointer;font-family:inherit;}
@@ -173,6 +177,9 @@ body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR','Malgun Gothi
   <button class="filter-btn active" data-filter="all" onclick="setFilter(this)">전체</button>
   <button class="filter-btn" data-filter="정기" onclick="setFilter(this)">정기</button>
   <button class="filter-btn" data-filter="비정기" onclick="setFilter(this)">비정기</button>
+  <div class="sep"></div>
+  <span style="font-size:11px;color:#8C93A4;align-self:center;">작업자</span>
+  <span id="ownerTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></span>
   <div class="sep"></div>
   <button class="ctrl-btn" onclick="expandAll()">전체 펼치기</button>
   <button class="ctrl-btn" onclick="collapseAll()">전체 접기</button>
@@ -431,10 +438,43 @@ function autoSave(){ pushHistory(); }
    필터 상태
 ════════════════════════════════════════════ */
 let currentFilter='all';
+let currentOwner='all';   // 작업자 필터
+
+// 담당자 문자열(쉼표 구분)을 배열로 — 공백 제거
+function parseOwners(ownerStr){
+  if(!ownerStr) return [];
+  return String(ownerStr).split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+}
 function setFilter(btn){
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentFilter=btn.dataset.filter;
+  render();
+}
+
+// 모든 프로젝트에서 작업자 목록 추출 후 탭 생성
+function buildOwnerTabs(){
+  const owners=new Set();
+  if(STATE&&Array.isArray(STATE.years)){
+    STATE.years.forEach(yd=>{
+      (yd.data||[]).forEach(p=>{
+        parseOwners(p.owner).forEach(o=>owners.add(o));  // 공동작업자 각각 추출
+      });
+    });
+  }
+  const wrap=document.getElementById('ownerTabs');
+  if(!wrap) return;
+  let html=`<button class="filter-btn owner-btn${currentOwner==='all'?' active':''}" data-owner="all" onclick="setOwner(this)">전체</button>`;
+  [...owners].sort().forEach(o=>{
+    html+=`<button class="filter-btn owner-btn${currentOwner===o?' active':''}" data-owner="${o}" onclick="setOwner(this)">${o}</button>`;
+  });
+  wrap.innerHTML=html;
+}
+
+function setOwner(btn){
+  document.querySelectorAll('.owner-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentOwner=btn.dataset.owner;
   render();
 }
 
@@ -517,6 +557,8 @@ function render(){
   if(!STATE) return;
   if(!Array.isArray(STATE.years)) STATE.years=[];
 
+  buildOwnerTabs();   // 작업자 탭 갱신
+
   STATE.years.forEach(yd=>{
     if(!Array.isArray(yd.data)) yd.data=[];   // data 누락 복구
     const {year,expanded:yExp,data}=yd;
@@ -553,6 +595,8 @@ function render(){
 
     ['정기','비정기'].forEach(cat=>{
       let catData=data.filter(p=>p.cat===cat);
+      // 작업자 필터 적용
+      if(currentOwner!=='all') catData=catData.filter(p=>parseOwners(p.owner).includes(currentOwner));
       if(!catData.length)return;
       if(currentFilter!=='all'&&currentFilter!==cat)return;
 
@@ -576,6 +620,14 @@ function render(){
         // 상위 행
         const gTr=document.createElement('tr');
         gTr.style.cursor='pointer';
+        // 드래그 순서 변경 (작업자 필터가 '전체'일 때만)
+        const dragEnabled = (currentOwner==='all');
+        if(dragEnabled){
+          gTr.draggable=true;
+          gTr.dataset.pid=p.id;
+          gTr.dataset.pyear=year;
+          gTr.dataset.pcat=cat;
+        }
         gTr.innerHTML=`
           <td class="td-label" style="background:${rowBg};height:42px;">
             <div class="label-inner">
@@ -615,6 +667,37 @@ function render(){
           }
           toggleProj(year,p.id);
         });
+
+        // ── 드래그 이벤트 ──
+        if(dragEnabled){
+          gTr.addEventListener('dragstart',e=>{
+            dragSrc={year:year,cat:cat,id:p.id};
+            gTr.style.opacity='0.4';
+            e.dataTransfer.effectAllowed='move';
+          });
+          gTr.addEventListener('dragend',()=>{
+            gTr.style.opacity='';
+            document.querySelectorAll('.drag-over-line').forEach(el=>el.classList.remove('drag-over-line'));
+          });
+          gTr.addEventListener('dragover',e=>{
+            e.preventDefault();
+            if(!dragSrc||dragSrc.year!==year||dragSrc.cat!==cat) return; // 같은 연도·구분 내에서만
+            e.dataTransfer.dropEffect='move';
+            gTr.classList.add('drag-over-line');
+          });
+          gTr.addEventListener('dragleave',()=>{
+            gTr.classList.remove('drag-over-line');
+          });
+          gTr.addEventListener('drop',e=>{
+            e.preventDefault();
+            gTr.classList.remove('drag-over-line');
+            if(!dragSrc||dragSrc.year!==year||dragSrc.cat!==cat) return;
+            if(dragSrc.id===p.id) return;
+            moveProject(year,dragSrc.id,p.id);
+            dragSrc=null;
+          });
+        }
+
         attachTip(gTr,()=>`<strong>${p.client}</strong>${p.proj} · ${p.cycle}<br><span class="tip-muted">전체: ${WDATES[gSIdx]} ~ ${WDATES[gEIdx]}</span>${p.owner?`<br><span class="tip-muted">담당: ${p.owner}</span>`:''}`);
         tbody.appendChild(gTr);
 
@@ -659,6 +742,23 @@ function toggleYear(year){
   const yd=STATE.years.find(y=>y.year===year);
   if(yd){yd.expanded=!yd.expanded;autoSave();render();}
 }
+let dragSrc=null;  // 드래그 중인 프로젝트 정보
+
+// 같은 연도 내에서 srcId 프로젝트를 targetId 위치로 이동
+function moveProject(year,srcId,targetId){
+  const yd=STATE.years.find(y=>y.year===year);
+  if(!yd||!Array.isArray(yd.data)) return;
+  const arr=yd.data;
+  const from=arr.findIndex(p=>p.id===srcId);
+  const to=arr.findIndex(p=>p.id===targetId);
+  if(from<0||to<0) return;
+  const [moved]=arr.splice(from,1);   // 원래 위치에서 빼고
+  const newTo=arr.findIndex(p=>p.id===targetId);  // 타겟 새 위치
+  arr.splice(newTo,0,moved);          // 타겟 앞에 삽입
+  autoSave();
+  render();
+}
+
 function toggleProj(year,id){
   const yd=STATE.years.find(y=>y.year===year);
   if(!yd)return;
@@ -700,8 +800,18 @@ function openConfirm(msg,cb){
 function closeConfirm(){document.getElementById('confirmModal').classList.remove('open');confirmCallback=null;}
 document.getElementById('confirmOkBtn').onclick=function(){if(confirmCallback)confirmCallback();closeConfirm();};
 
+// 연도 삭제 비밀번호 (필요시 이 값만 바꾸면 됩니다)
+const YEAR_DELETE_PASSWORD='gabwoo';
+
 function openConfirmYear(year){
-  openConfirm(`${year}년 전체 데이터를 삭제할까요? 복구할 수 없습니다.`,()=>{
+  const input=prompt(`⚠️ ${year}년 전체 데이터를 삭제합니다.\n복구할 수 없습니다.\n\n삭제하려면 비밀번호를 입력하세요:`);
+  if(input===null) return;          // 취소
+  if(input!==YEAR_DELETE_PASSWORD){
+    alert('비밀번호가 일치하지 않습니다. 삭제가 취소되었습니다.');
+    return;
+  }
+  // 비밀번호 확인됨 → 최종 확인
+  openConfirm(`${year}년 전체 데이터를 삭제합니다. 정말 진행할까요?`,()=>{
     STATE.years=STATE.years.filter(y=>y.year!==year);
     autoSave();render();
   });
