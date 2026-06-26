@@ -661,8 +661,8 @@ function render(){
               <span class="arrow${isExp?' open':''}">▶</span>
               <span class="type-badge" style="background:${bgc};color:${color}">${p.type}</span>
               <div class="label-text-wrap">
-                <div class="label-client">${p.client}</div>
-                <div class="label-proj">${p.proj}${p.cycle?` · ${p.cycle}`:''}${p.owner?` · ${p.owner}`:''}<span style="color:#A0A8B8;font-size:9px;margin-left:4px">(${p.spans.length}건)</span></div>
+                <div class="label-client">${p.client} · <span style="font-weight:400;color:#344054;">${p.proj}</span>${p.cycle?` · <span style="font-weight:400;color:#8C93A4;">${p.cycle}</span>`:''}</div>
+                <div class="label-proj">${p.owner?`${p.owner} `:'(담당자 없음) '}<span style="color:#A0A8B8;font-size:9px;">(${p.spans.length}건)</span></div>
               </div>
               <div class="row-btns">
                 <button class="row-btn" data-action="edit" data-year="${year}" data-id="${p.id}" title="수정">✏</button>
