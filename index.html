@@ -309,9 +309,9 @@ function setCalendar(year){
   MONTHS.forEach(m=>{MSTART.push(a);a+=m.w;});
 }
 
-const TYPE_COLOR={'간행물':'#3D8FD1','카달로그':'#1D9E75','브로슈어':'#1D9E75','캘린더':'#C07A10','단행본':'#C44F78','책자':'#D85A30','입찰&제안서':'#7265CC','기타':'#7A8496'};
-const TYPE_BG={'간행물':'#dbeeff','카달로그':'#d5f5e3','브로슈어':'#d5f5e3','캘린더':'#fdebd0','단행본':'#fadbd8','책자':'#fae8e0','입찰&제안서':'#e8daef','기타':'#eaecee'};
-const TYPES=['간행물','카달로그','브로슈어','캘린더','단행본','책자','입찰&제안서','기타'];
+const TYPE_COLOR={'간행물':'#3D8FD1','카달로그':'#1D9E75','브로슈어':'#1D9E75','캘린더':'#C07A10','웹용pdf':'#C44F78','책자':'#D85A30','입찰&제안서':'#7265CC','기타':'#7A8496'};
+const TYPE_BG={'간행물':'#dbeeff','카달로그':'#d5f5e3','브로슈어':'#d5f5e3','캘린더':'#fdebd0','웹용pdf':'#fadbd8','책자':'#fae8e0','입찰&제안서':'#e8daef','기타':'#eaecee'};
+const TYPES=['간행물','카달로그','브로슈어','캘린더','웹용pdf','책자','입찰&제안서','기타'];
 function wi(m,w){return MSTART[m-1]+(w-1);}
 
 /* ════════════════════════════════════════════
@@ -442,11 +442,10 @@ function matchesSearch(p){
 ════════════════════════════════════════════ */
 (function(){
   const el=document.getElementById('legend');
-  [['#3D8FD1','간행물'],['#1D9E75','카달로그'],['#C07A10','캘린더'],['#C44F78','단행본'],['#D85A30','책자'],['#7265CC','입찰&제안서'],['#7A8496','기타']].forEach(([c,l])=>{
+  [['#3D8FD1','간행물'],['#1D9E75','카달로그'],['#C07A10','캘린더'],['#C44F78','웹용pdf'],['#D85A30','책자'],['#7265CC','입찰&제안서'],['#7A8496','기타']].forEach(([c,l])=>{
     el.innerHTML+=`<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${l}</span>`;
   });
   el.innerHTML+=`<span class="legend-item"><span class="legend-dot" style="background:#E84040"></span>오늘</span>`;
-  el.innerHTML+=`<span class="legend-item"><span style="font-size:9px;padding:1px 5px;border-radius:8px;background:#E4F5EF;color:#0F6E56;font-weight:700;">기간 완료</span></span>`;
 })();
 
 /* ════════════════════════════════════════════
