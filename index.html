@@ -1104,7 +1104,7 @@ function normalizeState(st){
   };
   showLoadingOverlay(true);
   firebase.initializeApp(config);
-  DB_REF=firebase.database().ref('gantt/state');
+  DB_REF=firebase.database().ref('gabwoo-contents-v1');
 
   DB_REF.once('value').then(function(snap){
     var data=snap.val();
