@@ -704,17 +704,20 @@ function render(){
         }
 
         gTr.innerHTML=`
-          <td class="td-label" style="background:${rowBg};height:42px;">
-            <div class="label-inner">
+          <td class="td-label" style="background:${rowBg};height:46px;">
+            <div class="label-inner" style="gap:4px;">
               <span class="arrow${isExp?' open':''}">▶</span>
-              <span class="type-badge" style="background:${bgc};color:${color}">${p.type}</span>
-              <div class="label-text-wrap">
-                <div class="label-client">${p.client} · <span style="font-weight:400;color:#344054;">${p.proj}</span>${p.cycle?` · <span style="font-weight:400;color:#8C93A4;">${p.cycle}</span>`:''}</div>
-                <div class="label-proj">${p.owner?`${p.owner} `:'(담당자 없음) '}<span style="color:#A0A8B8;font-size:9px;">(${p.spans.length}건)</span></div>
+              <div style="font-size:14px;font-weight:700;color:#1A1F2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:64px;max-width:80px;flex-shrink:0;">${p.client}</div>
+              <div class="label-text-wrap" style="min-width:0;flex:1;">
+                <div style="font-size:10px;color:#344054;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;">· ${p.proj}${p.cycle?` · <span style="color:#8C93A4;">${p.cycle}</span>`:''}</div>
+                <div style="font-size:9px;color:#8C93A4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.4;display:flex;align-items:center;gap:3px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A0A8B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${p.owner||'(담당자 없음)'} <span style="color:#C8CDD8;">(${p.spans.length}건)</span></div>
               </div>
-              <div class="row-btns">
-                <button class="row-btn" data-action="edit" data-year="${year}" data-id="${p.id}" title="수정">✏</button>
-                <button class="row-btn" data-action="del" data-year="${year}" data-id="${p.id}" title="삭제">✕</button>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
+                <span class="type-badge" style="background:${bgc};color:${color};margin-top:0;">${p.type}</span>
+                <div class="row-btns">
+                  <button class="row-btn" data-action="edit" data-year="${year}" data-id="${p.id}" title="수정">✏</button>
+                  <button class="row-btn" data-action="del" data-year="${year}" data-id="${p.id}" title="삭제">✕</button>
+                </div>
               </div>
             </div>
           </td>
