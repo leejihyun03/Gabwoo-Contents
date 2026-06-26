@@ -128,7 +128,7 @@ tr[draggable=true] .label-client::before{content:'⠿ ';color:#C8CDD8;font-size:
 /* ── 모달 ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
-.modal-box{background:#fff;border-radius:12px;padding:24px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.modal-box{background:#fff;border-radius:12px;padding:24px;width:620px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18);}
 .field-label{font-size:10px;color:#8C93A4;display:block;margin-bottom:3px;}
 .field-input{width:100%;padding:6px 8px;border:1px solid #C8CDD8;border-radius:6px;font-size:12px;font-family:inherit;color:#1a1f2e;}
 .field-input:focus{outline:2px solid #2563A8;outline-offset:-1px;}
@@ -146,7 +146,12 @@ tr[draggable=true] .label-client::before{content:'⠿ ';color:#C8CDD8;font-size:
 .done-toggle{display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;border-radius:7px;background:#F7F8FA;border:1px solid #E2E6ED;}
 .done-toggle label{font-size:12px;color:#5A6276;cursor:pointer;user-select:none;}
 
-/* 유효성 오류 */
+/* 메모 팝업 */
+.memo-popup{position:fixed;background:#fff;border:1px solid #C8CDD8;border-radius:10px;padding:12px 14px;min-width:160px;max-width:300px;width:max-content;box-shadow:0 6px 24px rgba(0,0,0,0.15);z-index:600;display:none;word-break:break-all;}
+.memo-popup .memo-title{font-size:10px;font-weight:700;color:#8C93A4;display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+.memo-popup .memo-body{font-size:12px;color:#344054;line-height:1.7;white-space:pre-wrap;background:#F7F8FA;border-radius:6px;padding:8px 10px;border:1px solid #E2E6ED;}
+.memo-icon{cursor:pointer;color:#8C93A4;flex-shrink:0;padding:2px 4px;border-radius:4px;transition:all .15s;display:flex;align-items:center;}
+.memo-icon:hover{background:#FFF8E8;color:#BA7517;}
 .span-error{font-size:10px;color:#C44F78;margin-top:4px;display:none;}
 .span-error.visible{display:block;}
 
@@ -220,6 +225,15 @@ tr[draggable=true] .label-client::before{content:'⠿ ';color:#C8CDD8;font-size:
     <button class="save-btn pdf" onclick="printChart('expanded')" title="하위 기간까지 모두 펼쳐서 인쇄">🖨 전체 펼쳐 인쇄</button>
     <button class="save-btn pdf" onclick="printChart('collapsed')" title="업체명만 보이는 요약 형태로 인쇄">🖨 요약 인쇄</button>
   </span>
+</div>
+
+<!-- 메모 팝업 -->
+<div class="memo-popup" id="memoPopup">
+  <div class="memo-title">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+    메모
+  </div>
+  <div id="memoPopupBody" class="memo-body"></div>
 </div>
 
 <!-- 차트 영역 -->
@@ -541,6 +555,39 @@ function attachTip(row,buildHtml){
 }
 
 /* ════════════════════════════════════════════
+   메모 팝업
+════════════════════════════════════════════ */
+const memoPopup=document.getElementById('memoPopup');
+const memoPopupBody=document.getElementById('memoPopupBody');
+let memoVisible=false;
+
+function showMemo(e, text){
+  e.stopPropagation();
+  if(memoVisible&&memoPopup.dataset.current===text){
+    hideMemo(); return;
+  }
+  memoPopupBody.textContent=text;
+  memoPopup.dataset.current=text;
+  // 먼저 보이게 한 뒤 실제 크기로 위치 계산
+  memoPopup.style.left='-9999px';
+  memoPopup.style.top='-9999px';
+  memoPopup.style.display='block';
+  memoVisible=true;
+  const pw=memoPopup.offsetWidth, ph=memoPopup.offsetHeight;
+  const x=e.clientX+14, y=e.clientY+14;
+  memoPopup.style.left=Math.min(x, window.innerWidth-pw-12)+'px';
+  memoPopup.style.top=Math.min(y, window.innerHeight-ph-12)+'px';
+}
+function hideMemo(){
+  memoPopup.style.display='none';
+  memoVisible=false;
+  memoPopup.dataset.current='';
+}
+document.addEventListener('click',e=>{
+  if(!memoPopup.contains(e.target)) hideMemo();
+});
+
+/* ════════════════════════════════════════════
    완료 토글 (스팬 단위)
 ════════════════════════════════════════════ */
 function toggleSpanDone(year,projId,spanId,e){
@@ -732,18 +779,23 @@ function render(){
             const sIdx=wi(span.sm,span.sw),eIdx=wi(span.em,span.ew);
             const dots=span.intensity==='강'&&!spanDone?1:0;
             const sTr=document.createElement('tr');
+            sTr.draggable=true;
+            sTr.dataset.spanId=span.id;
+            sTr.dataset.projId=p.id;
+            sTr.dataset.spanYear=year;
             const doneBadge=spanDone?`<span class="done-badge" style="margin-left:4px;">완료</span>`:'';
             const subStyle=spanDone?'text-decoration:line-through;color:#9AA3B3;':'';
             const metaStyle=spanDone?'color:#B0B8C8;':'';
             sTr.innerHTML=`
-              <td class="td-label" style="background:${sBg};height:33px;">
+              <td class="td-label" style="background:${sBg};height:33px;cursor:grab;">
                 <div class="label-inner" style="padding-left:20px;gap:4px;">
-                  <span style="font-size:9px;color:#C8CDD8;flex-shrink:0;">└</span>
+                  <span style="font-size:9px;color:#C8CDD8;flex-shrink:0;">⠿</span>
                   <div class="label-text-wrap">
                     <div class="label-sub" style="${subStyle}">${span.label||'(레이블 없음)'}${doneBadge}</div>
-                    <div class="label-sub-meta" style="${metaStyle}">${WDATES[sIdx]} ~ ${WDATES[eIdx]}${span.intensity==='강'&&!spanDone?'<span class="label-strong">● 강</span>':''}</div>
+                    <div class="label-sub-meta" style="${metaStyle}">${WDATES[sIdx]} ~ ${WDATES[eIdx]}${span.intensity==='강'&&!spanDone?'<span class="label-strong">● 강</span>':''}${span.owner?` · <span style="color:#5A6276;">${span.owner}</span>`:''}</div>
                   </div>
                   <div class="row-btns">
+                    ${span.memo?`<span class="memo-icon" title="메모 보기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>`:''}
                     <button class="row-btn" data-action="spandone" title="${spanDone?'완료 취소':'완료 처리'}">${spanDone?'↩':'✓'}</button>
                   </div>
                 </div>
@@ -761,6 +813,36 @@ function render(){
             sTr.addEventListener('click',e=>{
               const btn=e.target.closest('.row-btn[data-action="spandone"]');
               if(btn){e.stopPropagation();toggleSpanDone(year,p.id,span.id,e);return;}
+              const memoBtn=e.target.closest('.memo-icon');
+              if(memoBtn&&span.memo){showMemo(e,span.memo);return;}
+            });
+            // ── 스팬 드래그 이벤트 ──
+            sTr.addEventListener('dragstart',e=>{
+              spanDragSrc={year,projId:p.id,spanId:span.id};
+              sTr.style.opacity='0.4';
+              e.dataTransfer.effectAllowed='move';
+              e.stopPropagation();
+            });
+            sTr.addEventListener('dragend',()=>{
+              sTr.style.opacity='';
+              document.querySelectorAll('.drag-over-line').forEach(el=>el.classList.remove('drag-over-line'));
+            });
+            sTr.addEventListener('dragover',e=>{
+              e.preventDefault();
+              e.stopPropagation();
+              if(!spanDragSrc||spanDragSrc.projId!==p.id) return;
+              e.dataTransfer.dropEffect='move';
+              sTr.classList.add('drag-over-line');
+            });
+            sTr.addEventListener('dragleave',()=>sTr.classList.remove('drag-over-line'));
+            sTr.addEventListener('drop',e=>{
+              e.preventDefault();
+              e.stopPropagation();
+              sTr.classList.remove('drag-over-line');
+              if(!spanDragSrc||spanDragSrc.projId!==p.id) return;
+              if(spanDragSrc.spanId===span.id) return;
+              moveSpan(year,p.id,spanDragSrc.spanId,span.id);
+              spanDragSrc=null;
             });
             attachTip(sTr,()=>`<strong>${span.label||p.proj}</strong><span class="tip-muted">${WDATES[sIdx]} ~ ${WDATES[eIdx]}</span><br><span class="tip-muted">작업 강도: ${span.intensity||'약'}</span>${spanDone?`<br><span class="tip-muted">✓ 완료됨</span>`:''}`);
             tbody.appendChild(sTr);
@@ -792,6 +874,8 @@ function toggleYear(year){
   if(yd){yd.expanded=!yd.expanded;autoSave();render();}
 }
 let dragSrc=null;
+let spanDragSrc=null;
+
 function moveProject(year,srcId,targetId){
   const yd=STATE.years.find(y=>y.year===year);
   if(!yd||!Array.isArray(yd.data)) return;
@@ -801,6 +885,21 @@ function moveProject(year,srcId,targetId){
   if(from<0||to<0) return;
   const [moved]=arr.splice(from,1);
   const newTo=arr.findIndex(p=>p.id===targetId);
+  arr.splice(newTo,0,moved);
+  autoSave();render();
+}
+
+function moveSpan(year,projId,srcSpanId,targetSpanId){
+  const yd=STATE.years.find(y=>y.year===year);
+  if(!yd) return;
+  const p=yd.data.find(x=>x.id===projId);
+  if(!p||!Array.isArray(p.spans)) return;
+  const arr=p.spans;
+  const from=arr.findIndex(s=>s.id===srcSpanId);
+  const to=arr.findIndex(s=>s.id===targetSpanId);
+  if(from<0||to<0) return;
+  const [moved]=arr.splice(from,1);
+  const newTo=arr.findIndex(s=>s.id===targetSpanId);
   arr.splice(newTo,0,moved);
   autoSave();render();
 }
@@ -873,21 +972,28 @@ let modalSpans=[];
 function spanBlockHTML(s,si,total){
   const mOpts=[...Array(12)].map((_,i)=>({v:i+1,l:`${i+1}월`}));
   const wOpts=[1,2,3,4,5,6].map(v=>({v,l:`${v}주`}));
-  const selHTML=(k,val,opts)=>`<select class="field-input" data-si="${si}" data-key="${k}">${opts.map(o=>`<option value="${o.v}"${o.v==val?' selected':''}>${o.l}</option>`).join('')}</select>`;
+  const dateSelHTML=(mKey,wKey,mVal,wVal)=>`
+    <div style="display:flex;gap:4px;align-items:center;">
+      <select class="field-input" data-si="${si}" data-key="${mKey}" style="flex:3;">${mOpts.map(o=>`<option value="${o.v}"${o.v==mVal?' selected':''}>${o.l}</option>`).join('')}</select>
+      <select class="field-input" data-si="${si}" data-key="${wKey}" style="flex:2;">${wOpts.map(o=>`<option value="${o.v}"${o.v==wVal?' selected':''}>${o.l}</option>`).join('')}</select>
+    </div>`;
   const rmBtn=total>1?`<button type="button" onclick="removeSpanBlock(${si})" style="position:absolute;top:8px;right:8px;border:none;background:none;font-size:14px;color:#C8CDD8;cursor:pointer;padding:0;line-height:1;">✕</button>`:'';
   return `<div class="span-block" id="spanblock-${si}">${rmBtn}
-    <div class="grid2">
-      <div><label class="field-label">하위 레이블</label><input class="field-input" type="text" data-si="${si}" data-key="label" value="${s.label||''}" placeholder="예: 봄호, 1분기..."></div>
-      <div><label class="field-label">작업 강도</label><div style="display:flex;gap:4px;margin-top:2px;">
-        <button type="button" class="int-btn${(s.intensity||'약')==='강'?' active-strong':''}" data-si="${si}" data-int="강" onclick="setIntensity(this)">강</button>
-        <button type="button" class="int-btn${(s.intensity||'약')==='약'?' active-weak':''}" data-si="${si}" data-int="약" onclick="setIntensity(this)">약</button>
+    <div style="display:grid;grid-template-columns:1fr 120px 80px;gap:8px;margin-bottom:8px;">
+      <div><label class="field-label">프로젝트명</label><input class="field-input" type="text" data-si="${si}" data-key="label" value="${s.label||''}" placeholder="예: 봄호, 1분기..."></div>
+      <div><label class="field-label">담당자</label><input class="field-input" type="text" data-si="${si}" data-key="owner" value="${s.owner||''}" placeholder="예: 이, 김"></div>
+      <div><label class="field-label">작업 강도</label><div style="display:flex;gap:3px;margin-top:2px;">
+        <button type="button" class="int-btn${(s.intensity||'약')==='강'?' active-strong':''}" data-si="${si}" data-int="강" onclick="setIntensity(this)" style="padding:4px 0;font-size:11px;">강</button>
+        <button type="button" class="int-btn${(s.intensity||'약')==='약'?' active-weak':''}" data-si="${si}" data-int="약" onclick="setIntensity(this)" style="padding:4px 0;font-size:11px;">약</button>
       </div></div>
     </div>
-    <div class="grid4">
-      <div><label class="field-label">시작월</label>${selHTML('sm',s.sm,mOpts)}</div>
-      <div><label class="field-label">시작주</label>${selHTML('sw',s.sw,wOpts)}</div>
-      <div><label class="field-label">종료월</label>${selHTML('em',s.em,mOpts)}</div>
-      <div><label class="field-label">종료주</label>${selHTML('ew',s.ew,wOpts)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+      <div><label class="field-label">시작일</label>${dateSelHTML('sm','sw',s.sm,s.sw)}</div>
+      <div><label class="field-label">종료일</label>${dateSelHTML('em','ew',s.em,s.ew)}</div>
+    </div>
+    <div style="margin-top:6px;">
+      <label class="field-label">메모</label>
+      <textarea class="field-input" data-si="${si}" data-key="memo" rows="2" placeholder="메모를 입력하세요…" style="resize:vertical;font-size:12px;line-height:1.5;">${s.memo||''}</textarea>
     </div>
     <div class="span-error" id="span-err-${si}">⚠️ 종료 시점이 시작 시점보다 앞서 있습니다.</div>
   </div>`;
@@ -917,6 +1023,12 @@ function collectSpans(){
   });
   document.querySelectorAll('#spanBlocksWrap input[data-key="label"]').forEach(inp=>{
     modalSpans[+inp.dataset.si].label=inp.value;
+  });
+  document.querySelectorAll('#spanBlocksWrap input[data-key="owner"]').forEach(inp=>{
+    modalSpans[+inp.dataset.si].owner=inp.value;
+  });
+  document.querySelectorAll('#spanBlocksWrap textarea[data-key="memo"]').forEach(ta=>{
+    modalSpans[+ta.dataset.si].memo=ta.value;
   });
 }
 
@@ -949,23 +1061,21 @@ function openAddModal(year){
   const defaultYear=year||(STATE.years.length?STATE.years[0].year:TODAY_YEAR);
   const yearOpts=STATE.years.map(y=>`<option value="${y.year}"${y.year===defaultYear?' selected':''}>${y.year}년</option>`).join('');
   document.getElementById('modalBody').innerHTML=`
-    <div class="grid2">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:8px;margin-bottom:10px;">
       <div><label class="field-label">연도</label><select class="field-input" id="m-year">${yearOpts}</select></div>
       <div><label class="field-label">구분</label><select class="field-input" id="m-cat"><option>정기</option><option>비정기</option></select></div>
-    </div>
-    <div class="grid2">
-      <div><label class="field-label">업체명</label><input class="field-input" type="text" id="m-client" placeholder="예: 한림원"></div>
-      <div><label class="field-label">작업 성격</label><select class="field-input" id="m-type">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
-    </div>
-    <div style="margin-bottom:10px;"><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" placeholder="예: 한림원의 창"></div>
-    <div class="grid2">
       <div><label class="field-label">주기</label><select class="field-input" id="m-cycle"><option>월간</option><option>계간</option><option>수시</option><option>기타</option></select></div>
-      <div><label class="field-label">담당자</label><input class="field-input" type="text" id="m-owner" placeholder="예: 이, 김 (쉼표 구분)"></div>
+      <div><label class="field-label">작업 성격</label><select class="field-input" id="m-type" style="font-size:10px;">${TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:8px;margin-bottom:10px;">
+      <div><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" placeholder="예: 한림원의 창"></div>
+      <div><label class="field-label">업체명</label><input class="field-input" type="text" id="m-client" placeholder="예: 한림원"></div>
+      <div><label class="field-label">담당자</label><input class="field-input" type="text" id="m-owner" placeholder="예: 이, 김"></div>
     </div>
     <div style="border-top:1px solid #E2E6ED;padding-top:12px;margin-top:4px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:#5A6276;">하위 기간</span>
-        <button type="button" class="btn-add-span" onclick="addSpanBlock()">＋ 기간 추가</button>
+        <span style="font-size:11px;font-weight:700;color:#5A6276;">하위 프로젝트</span>
+        <button type="button" class="btn-add-span" onclick="addSpanBlock()">＋ 하위 프로젝트 추가</button>
       </div>
       <div id="spanBlocksWrap">${modalSpans.map((s,si)=>spanBlockHTML(s,si,1)).join('')}</div>
     </div>`;
@@ -981,22 +1091,21 @@ function openEditModal(year,id){
   modalSpans=p.spans.map(s=>({...s}));
   document.getElementById('modalTitle').textContent=`${p.client} 수정 (${year}년)`;
   document.getElementById('modalBody').innerHTML=`
-    <div class="grid2">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px;gap:8px;margin-bottom:10px;">
       <div><label class="field-label">구분</label><select class="field-input" id="m-cat"><option${p.cat==='정기'?' selected':''}>정기</option><option${p.cat==='비정기'?' selected':''}>비정기</option></select></div>
-      <div><label class="field-label">작업 성격</label><select class="field-input" id="m-type">${TYPES.map(t=>`<option${p.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
-    </div>
-    <div class="grid2">
-      <div><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" value="${p.proj}"></div>
       <div><label class="field-label">주기</label><select class="field-input" id="m-cycle">${['월간','계간','수시','기타'].map(c=>`<option${p.cycle===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      <div><label class="field-label">작업 성격</label><select class="field-input" id="m-type" style="font-size:10px;">${TYPES.map(t=>`<option${p.type===t?' selected':''}>${t}</option>`).join('')}</select></div>
+      <div></div>
     </div>
-    <div class="grid2">
+    <div style="display:grid;grid-template-columns:1fr 1fr 100px;gap:8px;margin-bottom:10px;">
+      <div><label class="field-label">프로젝트명</label><input class="field-input" type="text" id="m-proj" value="${p.proj}"></div>
       <div><label class="field-label">업체명</label><input class="field-input" type="text" id="m-client" value="${p.client||''}"></div>
-      <div><label class="field-label">담당자</label><input class="field-input" type="text" id="m-owner" value="${p.owner||''}" placeholder="예: 이, 김 (쉼표 구분)"></div>
+      <div><label class="field-label">담당자</label><input class="field-input" type="text" id="m-owner" value="${p.owner||''}" placeholder="예: 이, 김"></div>
     </div>
-    <div style="border-top:1px solid #E2E6ED;padding-top:12px;margin-top:10px;">
+          <div style="border-top:1px solid #E2E6ED;padding-top:12px;margin-top:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:#5A6276;">하위 기간</span>
-        <button type="button" class="btn-add-span" onclick="addSpanBlock()">＋ 기간 추가</button>
+        <span style="font-size:11px;font-weight:700;color:#5A6276;">하위 프로젝트</span>
+        <button type="button" class="btn-add-span" onclick="addSpanBlock()">＋ 하위 프로젝트 추가</button>
       </div>
       <div id="spanBlocksWrap">${modalSpans.map((s,si)=>spanBlockHTML(s,si,modalSpans.length)).join('')}</div>
     </div>`;
