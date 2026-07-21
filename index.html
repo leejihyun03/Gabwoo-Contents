@@ -1203,6 +1203,7 @@ function normalizeState(st){
 <!-- ━━━ Firebase 실시간 연동 ━━━ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
 (function(){
   var config={
@@ -1218,6 +1219,15 @@ function normalizeState(st){
   firebase.initializeApp(config);
   DB_REF=firebase.database().ref('gabwoo-contents-v1');
 
+  /* 익명 인증: 화면에는 아무 표시도 없이 자동으로 로그인 처리 → 이후 규칙에서 auth!=null 조건 통과 */
+  firebase.auth().signInAnonymously().then(startApp).catch(function(err){
+    console.error('익명 인증 실패:',err.message);
+    STATE=JSON.parse(JSON.stringify(DEFAULT_DATA));
+    showLoadingOverlay(false);
+    render();
+  });
+
+  function startApp(){
   DB_REF.once('value').then(function(snap){
     var data=snap.val();
     STATE=data?data:JSON.parse(JSON.stringify(DEFAULT_DATA));
@@ -1242,6 +1252,7 @@ function normalizeState(st){
     render();
     console.error('Firebase 연결 실패:',err.message);
   });
+  } // startApp 끝
 })();
 </script>
 </body>
