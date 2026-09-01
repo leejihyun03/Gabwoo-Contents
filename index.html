@@ -1217,7 +1217,7 @@ function normalizeState(st){
   };
   showLoadingOverlay(true);
   firebase.initializeApp(config);
-  DB_REF=firebase.database().ref('gabwoo-contents-v1');
+  DB_REF=firebase.database().ref('gabwoo-k7m9x2');
 
   /* 익명 인증: 화면에는 아무 표시도 없이 자동으로 로그인 처리 → 이후 규칙에서 auth!=null 조건 통과 */
   firebase.auth().signInAnonymously().then(startApp).catch(function(err){
